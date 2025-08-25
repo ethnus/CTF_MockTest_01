@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethnus AWS Mock Test Project</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #2c3e50;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid #ccc;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f4f4f4;
+        }
+
+        .note {
+            background: #fffbcc;
+            border: 1px solid #e0d600;
+            padding: 10px;
+            margin: 15px 0;
+        }
+
+        .best-practice {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Ethnus AWS Mock Test Project</h1>
+
+    <h2>Introduction</h2>
+    <p>
+        This challenge places you in a simulated AWS environment designed to test your ability to implement, secure, and
+        troubleshoot
+        a serverless architecture under realistic conditions.
+    </p>
+    <ul>
+        <li>Operate within the constraints of AWS Academy Learner Lab (limited permissions, restricted IAM role).</li>
+        <li>Diagnose and resolve misconfigurations across compute, storage, network, and access control.</li>
+        <li>Apply AWS best practices and critical thinking to identify gaps.</li>
+        <li>Develop skills in troubleshooting and architecting resilient cloud-native systems.</li>
+    </ul>
+
+    <div class="note">
+        <strong>Important:</strong>
+        <ul>
+            <li>Do not inspect the bootstrap (<code>init.sh</code>) or evaluation (<code>eval.sh</code>) scripts.</li>
+            <li>Focus on discovery, reasoning, and resolution rather than shortcuts.</li>
+            <li>The objective is to build the mindset of a cloud architect and problem solver.</li>
+        </ul>
+    </div>
+
+    <h2>Architecture Overview</h2>
+    <p>
+        Note: Services marked with an asterisk (*) are outside of any VPC and accessed via private endpoints or IAM
+        roles.
+    </p>
+
+    <div class="mermaid">
+        flowchart TD
+        subgraph VPC_A["VPC A (Application VPC)"]
+        API["API Gateway (Private)"]
+        LReader["Lambda - Reader"]
+        LWriter["Lambda - Writer"]
+        end
+
+        subgraph "External AWS Services (Accessed Privately)"
+        S3["S3 Bucket (Encrypted)*"]
+        DDB["DynamoDB (Private Access)*"]
+        SNS["SNS Topic (Internal)*"]
+        KMS["KMS Key (Encryption)*"]
+        EB["EventBridge Rule (Scheduler)*"]
+        end
+
+        subgraph VPC_B["VPC B (Peer Network)"]
+        Ext["Other Internal Systems"]
+        end
+
+        API --> LReader
+        LReader --> DDB
+        LWriter --> DDB
+        LWriter --> S3
+        LWriter --> SNS
+        S3 --> KMS
+        DDB --> KMS
+        EB --> LWriter
+        VPC_A <-->|VPC Peering| VPC_B
+
+            classDef compute fill:#ffcc80,stroke:#e65100,stroke-width:1px,color:#000;
+            classDef storage fill:#c5e1a5,stroke:#33691e,stroke-width:1px,color:#000;
+            classDef db fill:#a5d6a7,stroke:#2e7d32,stroke-width:1px,color:#000;
+            classDef messaging fill:#ffe082,stroke:#f57f17,stroke-width:1px,color:#000;
+            classDef security fill:#b3e5fc,stroke:#0277bd,stroke-width:1px,color:#000;
+            classDef eventing fill:#d1c4e9,stroke:#512da8,stroke-width:1px,color:#000;
+            classDef gateway fill:#ffab91,stroke:#bf360c,stroke-width:1px,color:#000;
+
+            class API gateway;
+            class LReader,LWriter compute;
+            class S3 storage;
+            class DDB db;
+            class SNS messaging;
+            class KMS security;
+            class EB eventing;
+    </div>
+
+    <h2>Resources and Purpose</h2>
+    <table>
+        <tr>
+            <th>Resource</th>
+            <th>Purpose</th>
+        </tr>
+        <tr>
+            <td>S3 Bucket*</td>
+            <td>Holds application data; requires encryption and restricted access.</td>
+        </tr>
+        <tr>
+            <td>DynamoDB Table*</td>
+            <td>Stores key-value records; accessible only via private endpoints.</td>
+        </tr>
+        <tr>
+            <td>Lambda (Writer)*</td>
+            <td>Processes incoming data, updates DynamoDB, stores objects in S3, triggers SNS.</td>
+        </tr>
+        <tr>
+            <td>Lambda (Reader)*</td>
+            <td>Fetches and returns data via API Gateway; final output includes the success flag.</td>
+        </tr>
+        <tr>
+            <td>API Gateway*</td>
+            <td>Private REST API exposing read operations, restricted to VPCE.</td>
+        </tr>
+        <tr>
+            <td>SNS Topic*</td>
+            <td>Handles internal notifications for asynchronous tasks.</td>
+        </tr>
+        <tr>
+            <td>VPC A & B</td>
+            <td>Separate networks for application components and peer services.</td>
+        </tr>
+        <tr>
+            <td>KMS Key*</td>
+            <td>Encrypts stored data and Lambda environment variables.</td>
+        </tr>
+        <tr>
+            <td>EventBridge Rule*</td>
+            <td>Ensures periodic activity and health verification.</td>
+        </tr>
+    </table>
+
+    <h2>Milestones (Focus Areas)</h2>
+    <table>
+        <tr>
+            <th>#</th>
+            <th>Milestone</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>1</td>
+            <td>Secure Object Storage</td>
+            <td>
+                - Confirm encryption at rest with KMS.<br>
+                - Validate strict bucket policies.<br>
+                - Ensure mandatory tags are applied.
+            </td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>Data Layer Hardening</td>
+            <td>
+                - Assess DynamoDB endpoint configuration.<br>
+                - Review IAM permissions for minimal access.<br>
+                - Apply tagging for ownership.
+            </td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td>Compute Configuration</td>
+            <td>
+                - Review Lambda memory, timeout, and concurrency.<br>
+                - Ensure environment variables reference correct resources.<br>
+                - Restrict permissions to only what is needed.
+            </td>
+        </tr>
+        <tr>
+            <td>4</td>
+            <td>Event-driven Design</td>
+            <td>
+                - Check SNS publish permissions.<br>
+                - Ensure event-driven flows are functional.<br>
+                - Integrate internal alerts properly.
+            </td>
+        </tr>
+        <tr>
+            <td>5</td>
+            <td>Network Security</td>
+            <td>
+                - Verify gateway and interface endpoints.<br>
+                - Confirm proper VPC peering and route table configuration.<br>
+                - Disallow public exposure.
+            </td>
+        </tr>
+        <tr>
+            <td>6</td>
+            <td>API Exposure Control</td>
+            <td>
+                - Ensure API Gateway is PRIVATE.<br>
+                - Validate policy enforces VPCE-only access.<br>
+                - Block unauthorized access routes.
+            </td>
+        </tr>
+        <tr>
+            <td>7</td>
+            <td>Monitoring & Scheduling</td>
+            <td>
+                - Ensure EventBridge rule is enabled.<br>
+                - Confirm regular execution and observability.<br>
+                - Integrate with operational monitoring.
+            </td>
+        </tr>
+        <tr>
+            <td>8</td>
+            <td>Encryption Management</td>
+            <td>
+                - Review KMS grants for least privilege.<br>
+                - Validate integration with S3, DynamoDB, and Lambda.<br>
+                - Plan for key lifecycle management.
+            </td>
+        </tr>
+        <tr>
+            <td>9</td>
+            <td>Integration Testing</td>
+            <td>
+                - Run full end-to-end data flow tests.<br>
+                - Validate outputs and side effects.<br>
+                - Document troubleshooting steps.
+            </td>
+        </tr>
+        <tr>
+            <td>10</td>
+            <td>Resilience & Tagging</td>
+            <td>
+                - Confirm consistent tagging across all resources.<br>
+                - Ensure architecture supports operational resilience.<br>
+                - Align with cost and compliance requirements.
+            </td>
+        </tr>
+    </table>
+
+    <h2>Best Practices</h2>
+    <ul class="best-practice">
+        <li>Follow the AWS Well-Architected Framework for Security, Reliability, and Operational Excellence.</li>
+        <li>Use least privilege everywhere—restrict IAM and resource policies tightly.</li>
+        <li>Encrypt data at rest and in transit; ensure KMS integration throughout.</li>
+        <li>Tag all resources consistently for accountability and cost management.</li>
+        <li>Monitor, log, and verify each change you make—don’t assume correctness.</li>
+        <li>Use CLI and CloudWatch logs to validate real behavior, not assumptions.</li>
+        <li>Document findings and improvements as part of your process.</li>
+    </ul>
+
+    <p>
+        Completing this project demonstrates proficiency in building, securing, and troubleshooting cloud-native
+        applications within AWS under real-world constraints.
+    </p>
+
+</body>
+
+</html>

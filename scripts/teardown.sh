@@ -17,6 +17,9 @@ uniq_nonempty(){ tr '\t' '\n' | sed '/^$/d' | sort -u; }
 
 aws configure set region "$REGION" >/dev/null 2>&1 || true
 ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text 2>/dev/null || echo unknown)"
+if [ "$ACCOUNT_ID" = "unknown" ]; then
+  warn "AWS credentials not configured or expired - some cleanup may fail"
+fi
 info "cleanup start | acct=$ACCOUNT_ID region=$REGION prefix=$PREFIX"
 
 # ---------- 0) Terraform destroy (optional, bounded) ----------

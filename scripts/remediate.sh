@@ -177,7 +177,11 @@ JSON
 
   aws apigateway update-rest-api --rest-api-id "$API_ID" \
       --patch-operations "op=add,path=/endpointConfiguration/vpcEndpointIds,value=${VPCE_EXEC_ID}" >/dev/null 2>&1 || true
-  aws apigateway create-deployment --rest-api-id "$API_ID" --stage-name prod >/dev/null
+  
+  # Create deployment and stage (modern approach)
+  DEPLOYMENT_ID="$(aws apigateway create-deployment --rest-api-id "$API_ID" --query 'id' --output text)"
+  aws apigateway create-stage --rest-api-id "$API_ID" --deployment-id "$DEPLOYMENT_ID" --stage-name prod >/dev/null 2>&1 || \
+  aws apigateway update-stage --rest-api-id "$API_ID" --stage-name prod --patch-operations "op=replace,path=/deploymentId,value=${DEPLOYMENT_ID}" >/dev/null 2>&1 || true
   echo " api /orders configured and deployed"
 fi
 

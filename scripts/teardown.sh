@@ -55,6 +55,22 @@ else
   warn "bucket not found"
 fi
 
+# ---------- 1.5) DynamoDB: delete tables ----------
+info "discover DynamoDB tables"
+mapfile -t DDB_TABLES < <(aws dynamodb list-tables --query "TableNames[?starts_with(@, '${PREFIX}-')]" --output text 2>/dev/null | tr '\t' '\n' | grep -v "^$" || true)
+if [ "${#DDB_TABLES[@]}" -gt 0 ]; then
+  for table in "${DDB_TABLES[@]}"; do
+    [ -n "${table:-}" ] || continue
+    info "delete DynamoDB table: ${table}"
+    aws dynamodb delete-table --table-name "$table" >/dev/null 2>&1 || warn "table delete failed: $table"
+    # Wait for deletion to complete (bounded wait)
+    timeout 120 aws dynamodb wait table-not-exists --table-name "$table" 2>/dev/null || warn "table deletion timeout: $table"
+  done
+  ok "DynamoDB tables processed"
+else
+  warn "no DynamoDB tables found"
+fi
+
 # ---------- 2) Discover VPCs & related ----------
 info "discover VPCs by tag"
 mapfile -t VPCS < <(aws ec2 describe-vpcs --filters Name=tag:Challenge,Values="$PREFIX" --query 'Vpcs[].VpcId' --output text 2>/dev/null | uniq_nonempty)
@@ -129,6 +145,50 @@ mapfile -t PCXS < <(aws ec2 describe-vpc-peering-connections --filters Name=tag:
 for pcx in "${PCXS[@]:-}"; do
   [ -n "${pcx:-}" ] && aws ec2 delete-vpc-peering-connection --vpc-peering-connection-id "$pcx" >/dev/null 2>&1 || true
 done
+
+# ---------- 4.5) Lambda functions ----------
+info "delete Lambda functions"
+for FUNC in "${PREFIX}-writer" "${PREFIX}-reader"; do
+  if aws lambda get-function --function-name "$FUNC" >/dev/null 2>&1; then
+    info "delete Lambda function: $FUNC"
+    aws lambda delete-function --function-name "$FUNC" >/dev/null 2>&1 || warn "function delete failed: $FUNC"
+  fi
+done
+
+# ---------- 4.6) API Gateway ----------
+info "delete API Gateway"
+API_ID="$(aws apigateway get-rest-apis --query "items[?name=='${PREFIX}-api'].id|[0]" --output text 2>/dev/null || echo None)"
+if [ "$API_ID" != "None" ] && [ -n "$API_ID" ]; then
+  info "delete API Gateway: $API_ID"
+  aws apigateway delete-rest-api --rest-api-id "$API_ID" >/dev/null 2>&1 || warn "API Gateway delete failed: $API_ID"
+else
+  warn "API Gateway not found"
+fi
+
+# ---------- 4.7) SNS Topics ----------
+info "delete SNS topics"
+mapfile -t SNS_TOPICS < <(aws sns list-topics --query "Topics[?contains(TopicArn, ':${PREFIX}-')]" --output text 2>/dev/null | tr '\t' '\n' | grep -v "^$" || true)
+for topic_arn in "${SNS_TOPICS[@]:-}"; do
+  [ -n "${topic_arn:-}" ] || continue
+  info "delete SNS topic: $topic_arn"
+  aws sns delete-topic --topic-arn "$topic_arn" >/dev/null 2>&1 || warn "SNS topic delete failed: $topic_arn"
+done
+
+# ---------- 4.8) EventBridge Rules ----------
+info "delete EventBridge rules"
+RULE="${PREFIX}-tick"
+if aws events describe-rule --name "$RULE" >/dev/null 2>&1; then
+  info "delete EventBridge rule: $RULE"
+  # Remove targets first
+  mapfile -t TARGETS < <(aws events list-targets-by-rule --rule "$RULE" --query 'Targets[].Id' --output text 2>/dev/null | tr '\t' '\n' || true)
+  if [ "${#TARGETS[@]}" -gt 0 ]; then
+    aws events remove-targets --rule "$RULE" --ids "${TARGETS[@]}" >/dev/null 2>&1 || true
+  fi
+  # Delete rule
+  aws events delete-rule --name "$RULE" >/dev/null 2>&1 || warn "EventBridge rule delete failed: $RULE"
+else
+  warn "EventBridge rule not found: $RULE"
+fi
 
 # ---------- 5) Lambda log groups ----------
 for LG in "/aws/lambda/${PREFIX}-writer" "/aws/lambda/${PREFIX}-reader"; do

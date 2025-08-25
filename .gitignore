@@ -1,1 +1,3 @@
 readme.min.html
+.terraform/
+.terraform.lock.hcl

@@ -67,14 +67,22 @@ The project implements a multi-VPC serverless architecture with the following co
 
 ### For Students (Challenge Takers)
 
-1. **Clone Repository and Navigate**
+1. **Setup Workspace (AWS CloudShell)**
+   ```bash
+   # Create workspace directory with sufficient storage
+   sudo mkdir -p /workspace
+   sudo chown cloudshell-user:cloudshell-user /workspace
+   cd /workspace
+   ```
+
+2. **Clone Repository and Navigate**
    ```bash
    # Clone the challenge repository
    git clone https://github.com/ethnus/CTF_MockTest_01.git
    cd CTF_MockTest_01/scripts/
    ```
 
-2. **Deploy Infrastructure**
+3. **Deploy Infrastructure**
    ```bash
    # Set your preferences (optional)
    export PREFIX="ethnus-mocktest-01"
@@ -86,28 +94,33 @@ The project implements a multi-VPC serverless architecture with the following co
 
    **Quick One-Liner:**
    ```bash
-   git clone https://github.com/ethnus/CTF_MockTest_01.git && cd CTF_MockTest_01/scripts/ && bash deploy.sh && bash eval.sh
+   sudo mkdir -p /workspace && sudo chown cloudshell-user:cloudshell-user /workspace && cd /workspace && git clone https://github.com/ethnus/CTF_MockTest_01.git && cd CTF_MockTest_01/scripts/ && bash deploy.sh && bash eval.sh
    ```
 
-3. **Run Initial Evaluation**
+4. **Run Initial Evaluation**
    ```bash
    bash eval.sh
    ```
    You should see multiple `INCOMPLETE` status items - these are your challenges!
 
-4. **Start Troubleshooting**
+5. **Start Troubleshooting**
    - Use AWS Console, CLI, and documentation
    - Fix configurations one by one
    - Re-run `bash eval.sh` to check progress
 
-5. **Complete the Challenge**
+6. **Complete the Challenge**
    - All 12 checks should show `ACCEPTED`
    - The final flag will be revealed
 
 ### For Instructors (Challenge Administrators)
 
-1. **Clone and Deploy Student Environment**
+1. **Setup and Deploy Student Environment**
    ```bash
+   # Setup workspace directory (AWS CloudShell)
+   sudo mkdir -p /workspace
+   sudo chown cloudshell-user:cloudshell-user /workspace
+   cd /workspace
+   
    # Clone the challenge repository
    git clone https://github.com/ethnus/CTF_MockTest_01.git
    cd CTF_MockTest_01/scripts/
@@ -172,6 +185,12 @@ The evaluation script tests **12 key areas** of cloud architecture and security:
 # Verify AWS CLI access (usually automatic in Learner Lab)
 aws sts get-caller-identity
 
+# IMPORTANT: AWS CloudShell Setup (Recommended)
+# Create workspace directory with more storage (home ~ is only 1GB)
+sudo mkdir -p /workspace
+sudo chown cloudshell-user:cloudshell-user /workspace
+cd /workspace
+
 # Install jq if not available (required for eval.sh)
 sudo yum install jq -y  # For Amazon Linux/CloudShell
 # OR: sudo apt-get update && sudo apt-get install jq -y  # For Ubuntu
@@ -186,6 +205,10 @@ sudo yum install jq -y  # For Amazon Linux/CloudShell
 ### Complete Setup Example
 ```bash
 # Complete setup from scratch in AWS CloudShell
+sudo mkdir -p /workspace
+sudo chown cloudshell-user:cloudshell-user /workspace
+cd /workspace
+
 git clone https://github.com/ethnus/CTF_MockTest_01.git
 cd CTF_MockTest_01/scripts/
 bash deploy.sh
@@ -195,6 +218,16 @@ bash eval.sh
 ## 🔧 Troubleshooting Guide
 
 ### Common Issues
+
+**"No space left on device" or storage issues in AWS CloudShell**
+```bash
+# AWS CloudShell home directory (~) is limited to 1GB
+# Use /workspace directory instead (has more storage)
+sudo mkdir -p /workspace
+sudo chown cloudshell-user:cloudshell-user /workspace
+cd /workspace
+# Then clone and run from here
+```
 
 **"terraform not found"**
 ```bash

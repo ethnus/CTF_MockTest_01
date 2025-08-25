@@ -67,9 +67,11 @@ The project implements a multi-VPC serverless architecture with the following co
 
 ### For Students (Challenge Takers)
 
-1. **Clone and Navigate**
+1. **Clone Repository and Navigate**
    ```bash
-   cd scripts/
+   # Clone the challenge repository
+   git clone https://github.com/ethnus/CTF_MockTest_01.git
+   cd CTF_MockTest_01/scripts/
    ```
 
 2. **Deploy Infrastructure**
@@ -80,6 +82,11 @@ The project implements a multi-VPC serverless architecture with the following co
    
    # Deploy the challenge environment
    bash deploy.sh
+   ```
+
+   **Quick One-Liner:**
+   ```bash
+   git clone https://github.com/ethnus/CTF_MockTest_01.git && cd CTF_MockTest_01/scripts/ && bash deploy.sh && bash eval.sh
    ```
 
 3. **Run Initial Evaluation**
@@ -99,8 +106,13 @@ The project implements a multi-VPC serverless architecture with the following co
 
 ### For Instructors (Challenge Administrators)
 
-1. **Deploy Student Environment**
+1. **Clone and Deploy Student Environment**
    ```bash
+   # Clone the challenge repository
+   git clone https://github.com/ethnus/CTF_MockTest_01.git
+   cd CTF_MockTest_01/scripts/
+   
+   # Deploy the infrastructure
    bash deploy.sh
    ```
 
@@ -152,6 +164,33 @@ The evaluation script tests **12 key areas** of cloud architecture and security:
 | `eval.sh` | Evaluate current state (12 checks) | `bash eval.sh` |
 | `remediate.sh` | Fix all issues (instructor use) | `bash remediate.sh` |
 | `teardown.sh` | Complete cleanup | `bash teardown.sh` |
+
+## 🌐 Environment Setup
+
+### AWS Environment Requirements
+```bash
+# Verify AWS CLI access (usually automatic in Learner Lab)
+aws sts get-caller-identity
+
+# Install jq if not available (required for eval.sh)
+sudo yum install jq -y  # For Amazon Linux/CloudShell
+# OR: sudo apt-get update && sudo apt-get install jq -y  # For Ubuntu
+```
+
+### Supported Environments
+- **AWS CloudShell** (Recommended)
+- **EC2 instances** with appropriate IAM roles
+- **Local environment** with AWS CLI configured
+- **WSL on Windows** with AWS CLI
+
+### Complete Setup Example
+```bash
+# Complete setup from scratch in AWS CloudShell
+git clone https://github.com/ethnus/CTF_MockTest_01.git
+cd CTF_MockTest_01/scripts/
+bash deploy.sh
+bash eval.sh
+```
 
 ## 🔧 Troubleshooting Guide
 

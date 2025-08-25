@@ -6,9 +6,37 @@
 
 A comprehensive AWS serverless architecture challenge designed to test cloud engineering skills in a CTF (Capture The Flag)-type environment.
 
-## 🎯 Overview
+## 🎯 Challenge Overview
 
-This challenge simulates a real-world AWS environment where you'll need to implement, secure, and troubleshoot a serverless architecture while working within the constraints of AWS Academy Learner Lab. You'll diagnose misconfigurations, apply security best practices, and demonstrate proficiency in cloud-native application development.
+This is a **Capture The Flag (CTF)** challenge focused on AWS cloud security and infrastructure troubleshooting. Students will deploy a deliberately misconfigured serverless architecture and must identify and fix **12 specific issues** to complete all challenges.
+
+### What Gets Deployed
+- **S3 Bucket** with KMS encryption (missing tags)
+- **DynamoDB Table** for order storage (missing tags)  
+- **Lambda Functions** for data processing (concurrency & environment issues)
+- **VPC Infrastructure** with private networking (endpoint routing issues)
+- **API Gateway** for private API access (integration & policy issues)
+- **SNS Topic** for notifications (publishing blocked)
+- **EventBridge Rule** for scheduling (disabled)
+- **KMS Key** for encryption
+
+### The 12 Challenges
+After deployment, the evaluation will show **12 INCOMPLETE** challenges:
+
+1. **Tags: object storage** - S3 bucket missing required tags
+2. **Tags: key-value database** - DynamoDB table missing required tags
+3. **Compute concurrency** - Lambda writer function has zero concurrency limit
+4. **Compute configuration** - Lambda writer has wrong DynamoDB table name
+5. **Notifications publish** - SNS topic has policy blocking publish operations
+6. **Private data endpoint policy** - VPC endpoint policy missing DynamoDB write permissions
+7. **Network endpoints routing** - VPC endpoints not associated with route tables
+8. **API integration** - API Gateway wired to wrong Lambda function
+9. **API network restrictions** - API policy missing VPC endpoint restriction
+10. **Scheduled invocation** - EventBridge rule is disabled
+11. **Compute integration test** - Lambda writer fails due to multiple issues above
+12. **Final flag** - API returns flag only when all other issues are resolved
+
+This challenge simulates a real-world AWS environment where you'll need to implement, secure, and troubleshoot a serverless architecture while working within the constraints of AWS Academy Learner Lab.
 
 ## 🏗️ Architecture
 

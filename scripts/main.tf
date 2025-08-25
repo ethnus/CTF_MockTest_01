@@ -215,7 +215,7 @@ resource "aws_vpc_endpoint" "s3_gw" {
   vpc_endpoint_type = "Gateway"
   # Intentionally missing route table association for challenge
   # route_table_ids   = [aws_default_route_table.rtb_a_main.id]
-  tags              = merge(local.common_tags, { Name = "${var.prefix}-vpce-s3" })
+  tags = merge(local.common_tags, { Name = "${var.prefix}-vpce-s3" })
 }
 
 resource "aws_vpc_endpoint" "ddb_gw" {
@@ -299,15 +299,15 @@ resource "aws_sns_topic_policy" "topic_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "DenyPublish"
-        Effect = "Deny"
+        Sid       = "DenyPublish"
+        Effect    = "Deny"
         Principal = "*"
-        Action = ["sns:Publish"]
-        Resource = aws_sns_topic.topic.arn
+        Action    = ["sns:Publish"]
+        Resource  = aws_sns_topic.topic.arn
       },
       {
-        Sid    = "AllowOtherActions"
-        Effect = "Allow"
+        Sid       = "AllowOtherActions"
+        Effect    = "Allow"
         Principal = "*"
         Action = [
           "sns:GetTopicAttributes",
@@ -469,14 +469,14 @@ resource "aws_api_gateway_integration" "orders_lambda" {
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   # Intentionally wrong Lambda function for challenge
-  uri                     = aws_lambda_function.writer.invoke_arn  # Should be reader!
+  uri = aws_lambda_function.writer.invoke_arn # Should be reader!
 }
 
 # Permission for API Gateway to invoke Lambda reader
 resource "aws_lambda_permission" "allow_api_gateway" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.writer.function_name  # Wrong function!
+  function_name = aws_lambda_function.writer.function_name # Wrong function!
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.api.execution_arn}/*/*"
 }

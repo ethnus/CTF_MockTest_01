@@ -62,7 +62,7 @@ BUCKET="$(s3_bucket_by_prefix)"
 DDB_TABLE="${PREFIX}-orders"
 WRITER="${PREFIX}-writer"
 READER="${PREFIX}-reader"
-TOPIC_ARN="$(aws sns list-topics --query "Topics[?contains(TopicArn, ':${PREFIX}-topic')].TopicArn|[0]" --output text 2>/dev/null || echo "None")"
+TOPIC_ARN="$(aws sns list-topics --query "Topics[?contains(Arn, '${PREFIX}-notifications')].Arn|[0]" --output text 2>/dev/null || echo "None")"
 
 VPC_A_ID="$(vpc_by_cidr_and_tag 10.10.0.0/16)"
 RTA_MAIN="$(aws ec2 describe-route-tables --filters Name=vpc-id,Values="$VPC_A_ID" Name=association.main,Values=true --query 'RouteTables[0].RouteTableId' --output text 2>/dev/null || echo None)"
@@ -86,8 +86,8 @@ printf " account : %s\n" "$ACCOUNT_ID"
 printf " region  : %s\n" "$REGION"
 printf " prefix  : %s\n" "$PREFIX"
 rule 86
+# Header:
 printf "| %s | %s | %s | %s |\n" "$(pad "#" 2)" "$(pad "Check" 36)" "$(pad "Status" 10)" "$(pad "Note" 20)"
-rule 86
 
 ACCEPTED=0; INCOMPLETE=0; i=1
 
@@ -219,7 +219,8 @@ if [ "$API_ID" != "None" ]; then
 else ST="INCOMPLETE"; FLAG_NOTE=""; fi
 add_row "$i" "Service delivery: final verification" "$ST" "$FLAG_NOTE"; [ "$ST" = "ACCEPTED" ] && ACCEPTED=$((ACCEPTED+1)) || INCOMPLETE=$((INCOMPLETE+1)); i=$((i+1))
 
-for r in "${rows[@]}"; do IFS="|" read -r c1 c2 c3 c4 <<<"$r"; printf "| %s | %s | %s | %s |\n" "$(pad "$c1" 2)" "$(pad "$c2" 44)" "$(pad "$c3" 12)" "$(pad "$c4" 22)"; done
+# Data rows:
+printf "| %s | %s | %s | %s |\n" "$(pad "$c1" 2)" "$(pad "$c2" 36)" "$(pad "$c3" 10)" "$(pad "$c4" 20)"
 rule 86
 printf "ACCEPTED : %s\n" "$ACCEPTED"
 printf "INCOMPLETE : %s\n" "$INCOMPLETE"

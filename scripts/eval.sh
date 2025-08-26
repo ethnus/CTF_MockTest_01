@@ -86,7 +86,7 @@ printf " account : %s\n" "$ACCOUNT_ID"
 printf " region  : %s\n" "$REGION"
 printf " prefix  : %s\n" "$PREFIX"
 rule 86
-printf "| %s | %s | %s | %s |\n" "$(pad "#" 2)" "$(pad "Check" 44)" "$(pad "Status" 12)" "$(pad "Note" 22)"
+printf "| %s | %s | %s | %s |\n" "$(pad "#" 2)" "$(pad "Check" 36)" "$(pad "Status" 10)" "$(pad "Note" 20)"
 rule 86
 
 ACCEPTED=0; INCOMPLETE=0; i=1

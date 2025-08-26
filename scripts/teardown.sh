@@ -204,3 +204,60 @@ KEY_ID="$(aws kms list-aliases --query "Aliases[?AliasName=='${KMS_ALIAS}'].Targ
 aws kms delete-alias --alias-name "$KMS_ALIAS" >/dev/null 2>&1 || true
 
 ok "cleanup complete"
+
+# State management for ephemeral environments like AWS CloudShell
+# This ensures Terraform state is persisted in the user's home directory,
+# which survives CloudShell session restarts.
+BAK_DIR="$HOME/.tfbak/CTF_MockTest_01"
+STATE_FILE="terraform.tfstate"
+STATE_LOCK_FILE=".terraform.lock.hcl"
+
+# Function to restore state from backup
+restore_state() {
+  # Only restore if terraform has been initialized or if forced
+  if [ -d "$BAK_DIR" ] && [ -f "$BAK_DIR/$STATE_FILE" ]; then
+    echo "Restoring Terraform state from $BAK_DIR..."
+    if [ -d ".terraform" ] || [ "$1" == "force" ]; then
+        cp "$BAK_DIR/$STATE_FILE"* . 2>/dev/null
+        if [ -f "$BAK_DIR/$STATE_LOCK_FILE" ]; then
+            cp "$BAK_DIR/$STATE_LOCK_FILE" .
+        fi
+        echo "Restore complete."
+    else
+        echo "Skipping restore: .terraform directory not found. Run deploy first."
+    fi
+  fi
+}
+
+# Function to backup state
+backup_state() {
+  if [ -f "$STATE_FILE" ]; then
+    echo "Backing up Terraform state to $BAK_DIR..."
+    mkdir -p "$BAK_DIR"
+    cp "$STATE_FILE"* "$BAK_DIR/" 2>/dev/null
+    if [ -f "$STATE_LOCK_FILE" ]; then
+        cp "$STATE_LOCK_FILE" "$BAK_DIR/"
+    fi
+    echo "Backup complete."
+  fi
+}
+
+# Function to remove backup
+remove_backup() {
+  if [ -d "$BAK_DIR" ]; then
+    echo "Removing Terraform state backup from $BAK_DIR..."
+    rm -rf "$BAK_DIR"
+    echo "Backup removed."
+  fi
+}
+
+restore_state force
+
+#!/bin/bash
+# ... existing code ...
+# ... existing code ...
+terraform destroy -auto-approve
+
+remove_backup
+
+echo "Done."

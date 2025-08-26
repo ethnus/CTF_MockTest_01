@@ -8,7 +8,7 @@ A comprehensive AWS serverless architecture challenge designed to test cloud eng
 
 ## 🎯 Challenge Overview
 
-This is a **Capture The Flag (CTF)** challenge focused on AWS cloud security and infrastructure troubleshooting. Students will deploy a deliberately misconfigured serverless architecture and must identify and fix **12 specific issues** to complete all challenges.
+This is a **Capture The Flag (CTF)** challenge focused on AWS cloud security and infrastructure troubleshooting. Competitors will deploy a deliberately misconfigured serverless architecture and must identify and fix **12 specific issues** to complete all challenges.
 
 ### What Gets Deployed
 - **S3 Bucket** with KMS encryption (missing organizational standards)
@@ -93,7 +93,7 @@ The project implements a multi-VPC serverless architecture with the following co
 
 ## 🚀 Quick Start
 
-### For Students (Challenge Takers)
+### For Competitors (Challenge Takers)
 
 1. **Setup Workspace (AWS CloudShell)**
    ```bash
@@ -142,7 +142,7 @@ The project implements a multi-VPC serverless architecture with the following co
 
 ### For Instructors (Challenge Administrators)
 
-1. **Setup and Deploy Student Environment**
+1. **Setup and Deploy Competitor Environment**
    ```bash
    # Setup workspace directory (AWS CloudShell)
    sudo mkdir -p /workspace
@@ -163,8 +163,8 @@ The project implements a multi-VPC serverless architecture with the following co
    # Should show intentional misconfigurations
    ```
 
-3. **Monitor Student Progress**
-   Students can run `eval.sh` anytime to check their progress
+3. **Monitor Competitor Progress**
+   Competitors can run `eval.sh` anytime to check their progress
 
 4. **Provide Hints** (if needed)
    Each challenge has specific learning objectives (see Challenge Details below)
@@ -345,6 +345,23 @@ Upon completion, you will demonstrate proficiency in:
 
 > **⚠️ WARNING**: The following section contains detailed challenge descriptions and solution hints. Only expand if you're an instructor or have completed the challenge!
 
+### Summary Table of Fixes
+
+| # | Challenge | Issue | Solution | AWS Service |
+|---|-----------|-------|----------|-------------|
+| 1 | Resource governance: storage | S3 Bucket is missing the required `CostCenter` tag. | Add tag `CostCenter=Ethnus` to the S3 bucket. | S3 |
+| 2 | Resource governance: database | DynamoDB Table is missing the required `CostCenter` tag. | Add tag `CostCenter=Ethnus` to the DynamoDB table. | DynamoDB |
+| 3 | Performance optimization: compute | `writer` Lambda function memory is too low (128MB). | Increase memory size to 256MB in the function's configuration. | Lambda |
+| 4 | Application configuration: runtime | `reader` Lambda function has an incorrect DynamoDB table name in its environment variables. | Update the `DYNAMODB_TABLE` environment variable to the correct table name. | Lambda |
+| 5 | Communication services: publish | `writer` Lambda IAM role lacks permission to publish to the SNS topic. | Add an inline policy to the IAM role granting `sns:Publish` permission on the topic. | IAM, SNS |
+| 6 | Network security: data access | The VPC Endpoint for DynamoDB has a policy that is too restrictive. | Modify the endpoint policy to allow `dynamodb:PutItem` and `dynamodb:GetItem` actions for the Lambda roles. | VPC |
+| 7 | Network routing: service access | The private subnet's route table is missing a route to the S3 VPC endpoint. | Add a route for the S3 prefix list ID to the S3 VPC endpoint in the route table. | VPC |
+| 8 | API service: backend integration | The API Gateway integration for the `reader` Lambda is missing invocation permissions. | Add a resource-based policy to the `reader` Lambda granting `lambda:InvokeFunction` permission to API Gateway. | API Gateway, Lambda |
+| 9 | API security: access restrictions | The private API Gateway is missing a resource policy to allow access from the VPC. | Add a resource policy to the API Gateway allowing `execute-api:Invoke` from the VPC Endpoint for Execute API. | API Gateway |
+| 10 | Process automation: scheduling | The EventBridge (CloudWatch Events) rule that triggers the `writer` Lambda is disabled. | Enable the EventBridge rule. | EventBridge |
+| 11 | System integration: end-to-end | Meta-challenge: `reader` function cannot read what `writer` writes. | This resolves automatically after fixing underlying issues (mainly #3, #4, #5, #6, #7, #10). | Multiple |
+| 12 | Service delivery: final verification | Meta-challenge: The full end-to-end flow via API Gateway is not functional. | This resolves automatically after fixing API and integration issues (mainly #8, #9, and #11's dependencies). | Multiple |
+
 ## 🎯 Detailed Challenge Breakdown
 
 ### Challenge 1: Resource Governance - Storage
@@ -466,7 +483,7 @@ The final API call should return:
 
 ## 📞 Support
 
-- **Students**: Use AWS documentation, CloudWatch logs, and systematic troubleshooting
+- **Competitors**: Use AWS documentation, CloudWatch logs, and systematic troubleshooting
 - **Instructors**: Run `remediate.sh` to see working configuration examples
 - **Issues**: Check script output for specific error messages and context
 

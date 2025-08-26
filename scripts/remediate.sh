@@ -170,9 +170,9 @@ if [ "$API_ID" != "None" ] && [ -n "$ROOT_ID" ]; then
   "Condition":{"StringEquals":{"aws:SourceVpce":"${VPCE_EXEC_ID}"}}
 }]}
 JSON
-    POLICY_STR="$(jq -c . /tmp/api-policy-doc.json | sed 's/"/\\"/g')"
+    POLICY_STR="$(jq -c . /tmp/api-policy-doc.json)"
     aws apigateway update-rest-api --rest-api-id "$API_ID" \
-      --patch-operations "op=replace,path=/policy,value=\"$POLICY_STR\"" >/dev/null
+      --patch-operations "op=replace,path=/policy,value='$POLICY_STR'" >/dev/null
   fi
 
   aws apigateway update-rest-api --rest-api-id "$API_ID" \

@@ -11,30 +11,30 @@ A comprehensive AWS serverless architecture challenge designed to test cloud eng
 This is a **Capture The Flag (CTF)** challenge focused on AWS cloud security and infrastructure troubleshooting. Students will deploy a deliberately misconfigured serverless architecture and must identify and fix **12 specific issues** to complete all challenges.
 
 ### What Gets Deployed
-- **S3 Bucket** with KMS encryption (missing tags)
-- **DynamoDB Table** for order storage (missing tags)  
-- **Lambda Functions** for data processing (concurrency & environment issues)
-- **VPC Infrastructure** with private networking (endpoint routing issues)
+- **S3 Bucket** with KMS encryption (missing organizational standards)
+- **DynamoDB Table** for order storage (governance compliance issues)  
+- **Lambda Functions** for data processing (performance & configuration issues)
+- **VPC Infrastructure** with private networking (routing & security issues)
 - **API Gateway** for private API access (integration & policy issues)
-- **SNS Topic** for notifications (publishing blocked)
-- **EventBridge Rule** for scheduling (disabled)
+- **SNS Topic** for notifications (communication restrictions)
+- **EventBridge Rule** for scheduling (automation disabled)
 - **KMS Key** for encryption
 
 ### The 12 Challenges
 After deployment, the evaluation will show **12 INCOMPLETE** challenges:
 
-1. **Tags: object storage** - S3 bucket missing required tags
-2. **Tags: key-value database** - DynamoDB table missing required tags
-3. **Compute concurrency** - Lambda writer function has zero concurrency limit
-4. **Compute configuration** - Lambda writer has wrong DynamoDB table name
-5. **Notifications publish** - SNS topic has policy blocking publish operations
-6. **Private data endpoint policy** - VPC endpoint policy missing DynamoDB write permissions
-7. **Network endpoints routing** - VPC endpoints not associated with route tables
-8. **API integration** - API Gateway wired to wrong Lambda function
-9. **API network restrictions** - API policy missing VPC endpoint restriction
-10. **Scheduled invocation** - EventBridge rule is disabled
-11. **Compute integration test** - Lambda writer fails due to multiple issues above
-12. **Final flag** - API returns flag only when all other issues are resolved
+1. **Resource governance: storage** - Review organizational standards for cloud resources
+2. **Resource governance: database** - Ensure compliance with governance policies
+3. **Performance optimization: compute** - Review and optimize resource allocation
+4. **Application configuration: runtime** - Align runtime parameters with requirements
+5. **Communication services: publish** - Enable proper message delivery mechanisms
+6. **Network security: data access** - Configure appropriate access permissions
+7. **Network routing: service access** - Optimize traffic routing for cloud services
+8. **API service: backend integration** - Establish proper service connections
+9. **API security: access restrictions** - Implement and enforce access policies
+10. **Process automation: scheduling** - Activate automation workflows
+11. **System integration: end-to-end** - Ensure all service dependencies are operational
+12. **Service delivery: final verification** - Complete mission requirements
 
 This challenge simulates a real-world AWS environment where you'll need to implement, secure, and troubleshoot a serverless architecture while working within the constraints of AWS Academy Learner Lab.
 
@@ -184,18 +184,18 @@ The evaluation script tests **12 key areas** of cloud architecture and security:
 
 | # | Challenge | Focus Area | Learning Objective |
 |---|-----------|------------|-------------------|
-| 1 | Tags: object storage | Resource Management | Proper S3 bucket tagging |
-| 2 | Tags: key-value database | Resource Management | DynamoDB tagging compliance |
-| 3 | Compute concurrency | Performance | Lambda concurrency limits |
-| 4 | Compute configuration | Application Config | Environment variables |
-| 5 | Notifications publish | Messaging | SNS permissions |
-| 6 | Private data endpoint policy | Network Security | VPC endpoint policies |
-| 7 | Network endpoints routing | Network Architecture | Route table associations |
-| 8 | API integration | Service Integration | API Gateway + Lambda |
-| 9 | API network restrictions | Security | Private API access control |
-| 10 | Scheduled invocation | Automation | EventBridge configuration |
-| 11 | Compute integration test | End-to-End Testing | Service connectivity |
-| 12 | Final flag | Challenge Completion | API endpoint functionality |
+| 1 | Resource governance: storage | Compliance | Organizational tagging standards |
+| 2 | Resource governance: database | Compliance | Resource labeling best practices |
+| 3 | Performance optimization: compute | Performance | Resource limit optimization |
+| 4 | Application configuration: runtime | Configuration | Environment parameter alignment |
+| 5 | Communication services: publish | Messaging | Service access permissions |
+| 6 | Network security: data access | Security | VPC endpoint policy configuration |
+| 7 | Network routing: service access | Networking | Route table optimization |
+| 8 | API service: backend integration | Integration | Service-to-service connectivity |
+| 9 | API security: access restrictions | Security | Private API access control |
+| 10 | Process automation: scheduling | Automation | Event-driven architecture |
+| 11 | System integration: end-to-end | Testing | Multi-service dependencies |
+| 12 | Service delivery: final verification | Completion | Full system functionality |
 
 ## 🛠️ Available Scripts
 
@@ -347,65 +347,101 @@ Upon completion, you will demonstrate proficiency in:
 
 ## 🎯 Detailed Challenge Breakdown
 
-### Challenge 1: Tags - Object Storage
-**Issue**: S3 bucket missing required tags  
-**Fix**: Add `Owner=Ethnus` and `Challenge=ethnus-mocktest-01` tags  
-**Command**: `aws s3api put-bucket-tagging --bucket <bucket-name> --tagging 'TagSet=[{Key=Owner,Value=Ethnus},{Key=Challenge,Value=ethnus-mocktest-01}]'`
+### Challenge 1: Resource Governance - Storage
+**Issue**: Cloud resources missing organizational compliance labels
+**Focus**: Review governance standards for resource identification
+**Best Practices**: 
+• Implement consistent labeling strategies
+• Follow organizational tagging policies
+• Enable resource tracking and cost allocation
 
-### Challenge 2: Tags - Key-Value Database  
-**Issue**: DynamoDB table missing required tags  
-**Fix**: Add same tags to DynamoDB table  
-**Command**: `aws dynamodb tag-resource --resource-arn <table-arn> --tags Key=Owner,Value=Ethnus Key=Challenge,Value=ethnus-mocktest-01`
+### Challenge 2: Resource Governance - Database  
+**Issue**: Database resources not following compliance requirements
+**Focus**: Ensure all resources meet governance standards
+**Best Practices**:
+• Apply standardized resource identification
+• Maintain compliance across all resource types
+• Enable proper resource categorization
 
-### Challenge 3: Compute Concurrency
-**Issue**: Lambda writer function has concurrency limit of 0  
-**Fix**: Remove concurrency limit to allow execution  
-**Command**: `aws lambda delete-function-concurrency --function-name ethnus-mocktest-01-writer`
+### Challenge 3: Performance Optimization - Compute
+**Issue**: Compute resources have restrictive performance limits
+**Focus**: Review and optimize resource allocation settings
+**Best Practices**:
+• Configure appropriate performance limits
+• Enable elastic scaling capabilities
+• Optimize resource utilization
 
-### Challenge 4: Compute Configuration
-**Issue**: Lambda writer has wrong DDB_TABLE environment variable  
-**Fix**: Update environment variable to correct table name  
-**Command**: `aws lambda update-function-configuration --function-name ethnus-mocktest-01-writer --environment Variables='{DDB_TABLE=ethnus-mocktest-01-orders,BUCKET=<bucket>,TOPIC_ARN=<topic>}'`
+### Challenge 4: Application Configuration - Runtime
+**Issue**: Application runtime parameters misaligned with infrastructure
+**Focus**: Align application configuration with deployed resources
+**Best Practices**:
+• Maintain configuration consistency
+• Use infrastructure-aware settings
+• Implement proper service discovery
 
-### Challenge 5: Notifications Publish
-**Issue**: SNS topic policy doesn't allow publishing  
-**Fix**: Add policy allowing publish from account owner  
-**Solution**: Update SNS topic policy with proper permissions
+### Challenge 5: Communication Services - Publish
+**Issue**: Message publishing capabilities restricted by access policies
+**Focus**: Enable proper message delivery mechanisms
+**Best Practices**:
+• Configure appropriate service permissions
+• Implement secure messaging patterns
+• Enable cross-service communication
 
-### Challenge 6: Private Data Endpoint Policy
-**Issue**: DynamoDB VPC endpoint policy too restrictive  
-**Fix**: Update VPC endpoint policy to allow DynamoDB PutItem  
-**Solution**: Modify VPC endpoint policy to include `dynamodb:PutItem` action
+### Challenge 6: Network Security - Data Access
+**Issue**: Network access controls too restrictive for data operations
+**Focus**: Configure appropriate access permissions for data services
+**Best Practices**:
+• Implement least-privilege access
+• Enable necessary data operations
+• Maintain security while enabling functionality
 
-### Challenge 7: Network Endpoints Routing
-**Issue**: VPC endpoints not associated with main route table  
-**Fix**: Associate S3 and DynamoDB gateway endpoints with main route table  
-**Command**: `aws ec2 modify-vpc-endpoint --vpc-endpoint-id <endpoint-id> --add-route-table-ids <route-table-id>`
+### Challenge 7: Network Routing - Service Access
+**Issue**: Network routing not optimized for cloud service connectivity
+**Focus**: Optimize traffic routing for efficient service access
+**Best Practices**:
+• Implement efficient routing strategies
+• Enable private service connectivity
+• Optimize network traffic flows
 
-### Challenge 8: API Integration
-**Issue**: API Gateway /orders resource not properly integrated with Lambda  
-**Fix**: Ensure API Gateway resource exists and is connected to reader Lambda  
-**Solution**: Create resource, method, and integration in API Gateway
+### Challenge 8: API Service - Backend Integration
+**Issue**: API gateway not properly connected to backend services
+**Focus**: Establish proper service-to-service connections
+**Best Practices**:
+• Implement proper API integrations
+• Enable service connectivity
+• Configure backend service routing
 
-### Challenge 9: API Network Restrictions
-**Issue**: API Gateway policy missing VPC endpoint condition  
-**Fix**: Update API Gateway policy to restrict access to specific VPC endpoint  
-**Solution**: Add `aws:SourceVpce` condition to API Gateway resource policy
+### Challenge 9: API Security - Access Restrictions
+**Issue**: API access controls not properly configured for network restrictions
+**Focus**: Implement and enforce appropriate access policies
+**Best Practices**:
+• Restrict API access to authorized sources
+• Implement network-based access controls
+• Enable private API patterns
 
-### Challenge 10: Scheduled Invocation
-**Issue**: EventBridge rule is disabled  
-**Fix**: Enable the EventBridge rule  
-**Command**: `aws events enable-rule --name ethnus-mocktest-01-tick`
+### Challenge 10: Process Automation - Scheduling
+**Issue**: Automated processes not active
+**Focus**: Activate automation workflows for operational efficiency
+**Best Practices**:
+• Enable event-driven automation
+• Implement scheduled operations
+• Configure proper automation triggers
 
-### Challenge 11: Compute Integration Test
-**Issue**: Lambda writer cannot access DynamoDB, S3, or SNS  
-**Fix**: Requires fixes from previous challenges to work properly  
-**Verification**: Lambda function should return `{"ddb_ok": true, "s3_ok": true, "sns_ok": true}`
+### Challenge 11: System Integration - End-to-End
+**Issue**: Service dependencies not fully operational
+**Focus**: Ensure all system components work together properly
+**Best Practices**:
+• Validate cross-service functionality
+• Test end-to-end workflows
+• Ensure dependency resolution
 
-### Challenge 12: Final Flag
-**Issue**: API Gateway /orders endpoint not accessible or functioning  
-**Fix**: Requires all previous challenges to be completed  
-**Success**: API returns `{"flag": "ETHNUS{w3ll_4rch1t3ct3d_cl0ud_s3cur1ty_2025}"}`
+### Challenge 12: Service Delivery - Final Verification
+**Issue**: Complete system not delivering expected functionality
+**Focus**: Validate full mission requirements are met
+**Best Practices**:
+• Verify end-to-end system operation
+• Confirm all requirements satisfied
+• Validate complete service delivery
 
 ## 🏆 Success Criteria
 

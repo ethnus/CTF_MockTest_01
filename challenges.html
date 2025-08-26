@@ -78,7 +78,7 @@
     <div class="note">
         <strong>Important:</strong>
         <ul>
-            <li>Do not inspect the bootstrap (<code>init.sh</code>) or evaluation (<code>eval.sh</code>) scripts.</li>
+            <li>Do not inspect the bootstrap (<code>deploy.sh</code>) or evaluation (<code>eval.sh</code>) scripts.</li>
             <li>Focus on discovery, reasoning, and resolution rather than shortcuts.</li>
             <li>The objective is to build the mindset of a cloud architect and problem solver.</li>
         </ul>
@@ -181,101 +181,119 @@
         </tr>
     </table>
 
-    <h2>Milestones (Focus Areas)</h2>
+    <h2>Challenge Focus Areas</h2>
     <table>
         <tr>
             <th>#</th>
-            <th>Milestone</th>
+            <th>Challenge</th>
             <th>Description</th>
         </tr>
         <tr>
             <td>1</td>
-            <td>Secure Object Storage</td>
+            <td>Resource Governance - Storage</td>
             <td>
-                - Confirm encryption at rest with KMS.<br>
-                - Validate strict bucket policies.<br>
-                - Ensure mandatory tags are applied.
+                - Review organizational standards for cloud resources<br>
+                - Implement consistent labeling strategies<br>
+                - Enable resource tracking and cost allocation
             </td>
         </tr>
         <tr>
             <td>2</td>
-            <td>Data Layer Hardening</td>
+            <td>Resource Governance - Database</td>
             <td>
-                - Assess DynamoDB endpoint configuration.<br>
-                - Review IAM permissions for minimal access.<br>
-                - Apply tagging for ownership.
+                - Ensure compliance with governance policies<br>
+                - Apply standardized resource identification<br>
+                - Maintain compliance across all resource types
             </td>
         </tr>
         <tr>
             <td>3</td>
-            <td>Compute Configuration</td>
+            <td>Performance Optimization - Compute</td>
             <td>
-                - Review Lambda memory, timeout, and concurrency.<br>
-                - Ensure environment variables reference correct resources.<br>
-                - Restrict permissions to only what is needed.
+                - Review and optimize resource allocation settings<br>
+                - Configure appropriate performance limits<br>
+                - Enable elastic scaling capabilities
             </td>
         </tr>
         <tr>
             <td>4</td>
-            <td>Event-driven Design</td>
+            <td>Application Configuration - Runtime</td>
             <td>
-                - Check SNS publish permissions.<br>
-                - Ensure event-driven flows are functional.<br>
-                - Integrate internal alerts properly.
+                - Align runtime parameters with requirements<br>
+                - Maintain configuration consistency<br>
+                - Implement proper service discovery
             </td>
         </tr>
         <tr>
             <td>5</td>
-            <td>Network Security</td>
+            <td>Communication Services - Publish</td>
             <td>
-                - Verify gateway and interface endpoints.<br>
-                - Confirm proper VPC peering and route table configuration.<br>
-                - Disallow public exposure.
+                - Enable proper message delivery mechanisms<br>
+                - Configure appropriate service permissions<br>
+                - Enable cross-service communication
             </td>
         </tr>
         <tr>
             <td>6</td>
-            <td>API Exposure Control</td>
+            <td>Network Security - Data Access</td>
             <td>
-                - Ensure API Gateway is PRIVATE.<br>
-                - Validate policy enforces VPCE-only access.<br>
-                - Block unauthorized access routes.
+                - Configure appropriate access permissions<br>
+                - Implement least-privilege access<br>
+                - Enable necessary data operations
             </td>
         </tr>
         <tr>
             <td>7</td>
-            <td>Monitoring & Scheduling</td>
+            <td>Network Routing - Service Access</td>
             <td>
-                - Ensure EventBridge rule is enabled.<br>
-                - Confirm regular execution and observability.<br>
-                - Integrate with operational monitoring.
+                - Optimize traffic routing for cloud services<br>
+                - Implement efficient routing strategies<br>
+                - Enable private service connectivity
             </td>
         </tr>
         <tr>
             <td>8</td>
-            <td>Encryption Management</td>
+            <td>API Service - Backend Integration</td>
             <td>
-                - Review KMS grants for least privilege.<br>
-                - Validate integration with S3, DynamoDB, and Lambda.<br>
-                - Plan for key lifecycle management.
+                - Establish proper service connections<br>
+                - Implement proper API integrations<br>
+                - Configure backend service routing
             </td>
         </tr>
         <tr>
             <td>9</td>
-            <td>Integration Testing</td>
+            <td>API Security - Access Restrictions</td>
             <td>
-                - Run full end-to-end data flow tests.<br>
-                - Validate outputs and side effects.<br>
-                - Document troubleshooting steps.
+                - Implement and enforce access policies<br>
+                - Restrict API access to authorized sources<br>
+                - Enable private API patterns
             </td>
         </tr>
         <tr>
             <td>10</td>
-            <td>Resilience & Tagging</td>
+            <td>Process Automation - Scheduling</td>
             <td>
-                - Confirm consistent tagging across all resources.<br>
-                - Ensure architecture supports operational resilience.<br>
-                - Align with cost and compliance requirements.
+                - Activate automation workflows<br>
+                - Enable event-driven automation<br>
+                - Configure proper automation triggers
+            </td>
+        </tr>
+        <tr>
+            <td>11</td>
+            <td>System Integration - End-to-End</td>
+            <td>
+                - Ensure all service dependencies are operational<br>
+                - Validate cross-service functionality<br>
+                - Test end-to-end workflows
+            </td>
+        </tr>
+        <tr>
+            <td>12</td>
+            <td>Service Delivery - Final Verification</td>
+            <td>
+                - Complete mission requirements<br>
+                - Verify end-to-end system operation<br>
+                - Validate complete service delivery
             </td>
         </tr>
     </table>
@@ -286,7 +304,7 @@
         <li>Use least privilege everywhere—restrict IAM and resource policies tightly.</li>
         <li>Encrypt data at rest and in transit; ensure KMS integration throughout.</li>
         <li>Tag all resources consistently for accountability and cost management.</li>
-        <li>Monitor, log, and verify each change you make—don’t assume correctness.</li>
+        <li>Monitor, log, and verify each change you make—don't assume correctness.</li>
         <li>Use CLI and CloudWatch logs to validate real behavior, not assumptions.</li>
         <li>Document findings and improvements as part of your process.</li>
     </ul>

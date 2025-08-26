@@ -18,8 +18,32 @@ PARTITION="$(aws sts get-caller-identity --query Arn --output text 2>/dev/null |
 
 rows=()
 add_row(){ rows+=("$1|$2|$3|$4"); }
-pad(){ local txt="$1" w="$2" fill; local len=${#txt}; if [ "$len" -ge "$w" ]; then echo -n "$txt"; else fill=$((w-len)); printf "%s%*s" "$txt" $fill ""; fi; }
-rule(){ printf "%s\n" "$(printf '%0.s-' $(seq 1 "$1"))"; }
+
+# Check if basic infrastructure exists before evaluation
+check_infrastructure() {
+  local bucket_count s3_vpc_endpoint ddb_table lambda_count
+  
+  bucket_count=$(aws s3api list-buckets --query "length(Buckets[?starts_with(Name, '${PREFIX}-') && contains(Name, 'data')])" --output text 2>/dev/null || echo "0")
+  ddb_table=$(aws dynamodb describe-table --table-name "${PREFIX}-orders" --query "Table.TableName" --output text 2>/dev/null || echo "")
+  lambda_count=$(aws lambda list-functions --query "length(Functions[?starts_with(FunctionName, '${PREFIX}-')])" --output text 2>/dev/null || echo "0")
+  
+  if [ "$bucket_count" = "0" ] || [ -z "$ddb_table" ] || [ "$lambda_count" -lt "2" ]; then
+    echo ""
+    echo "❌ ERROR: Infrastructure not found"
+    echo ""
+    echo "Expected environment components are missing."
+    echo "Please deploy the infrastructure first using:"
+    echo "  bash deploy.sh"
+    echo ""
+    echo "If deployment failed, try cleanup and redeploy:"
+    echo "  bash teardown.sh && bash deploy.sh"
+    echo ""
+    exit 1
+  fi
+}
+
+# Add infrastructure check before evaluation
+check_infrastructure
 
 s3_bucket_by_prefix() {
   aws s3api list-buckets --query 'Buckets[].Name' --output text 2>/dev/null \
@@ -65,133 +89,158 @@ rule 72
 
 ACCEPTED=0; INCOMPLETE=0; i=1
 
-# 1) Tags: object storage
-if [ -n "${BUCKET:-}" ] && aws s3api get-bucket-tagging --bucket "$BUCKET" >/dev/null 2>&1; then
-  TAGS_JSON="$(aws s3api get-bucket-tagging --bucket "$BUCKET" --output json 2>/dev/null || echo '{}')"
-  has_owner="$(echo "$TAGS_JSON" | jq -r '.TagSet[]? | select(.Key=="Owner" and .Value=="Ethnus") | .Value' | wc -l)"
-  has_chal="$(echo "$TAGS_JSON" | jq -r '.TagSet[]? | select(.Key=="Challenge" and .Value=="'"$PREFIX"'") | .Value' | wc -l)"
-  if [ "$has_owner" -ge 1 ] && [ "$has_chal" -ge 1 ]; then ST="ACCEPTED"; NOTE="ok"; else ST="INCOMPLETE"; NOTE="tags"; fi
-else ST="INCOMPLETE"; NOTE="tags"; fi
-add_row "$i" "Tags: object storage" "$ST" "$NOTE"; [ "$ST" = "ACCEPTED" ] && ACCEPTED=$((ACCEPTED+1)) || INCOMPLETE=$((INCOMPLETE+1)); i=$((i+1))
-
-# 2) Tags: key-value database
-DDB_ARN="arn:${PARTITION:-aws}:dynamodb:${REGION}:${ACCOUNT_ID}:table/${DDB_TABLE}"
-if aws dynamodb describe-table --table-name "$DDB_TABLE" >/dev/null 2>&1; then
-  if TJSON="$(aws dynamodb list-tags-of-resource --resource-arn "$DDB_ARN" --output json 2>/dev/null)"; then
-    has_owner="$(echo "$TJSON" | jq -r '.Tags[]? | select(.Key=="Owner" and .Value=="Ethnus") | .Value' | wc -l)"
-    has_chal="$(echo "$TJSON" | jq -r '.Tags[]? | select(.Key=="Challenge" and .Value=="'"$PREFIX"'") | .Value' | wc -l)"
+# ---------- Challenge 1: Resource labeling compliance ----------
+BUCKET_NAME="$(aws s3api list-buckets --query "Buckets[?starts_with(Name, '${PREFIX}-') && contains(Name, 'data')].Name|[0]" --output text 2>/dev/null || echo "")"
+if [ -n "$BUCKET_NAME" ]; then
+  BUCKET_TAGS="$(aws s3api get-bucket-tagging --bucket "$BUCKET_NAME" --query 'TagSet[?Key==`Owner` && Value==`Ethnus`]|[0].Key' --output text 2>/dev/null || echo "")"
+  if [ "$BUCKET_TAGS" = "Owner" ]; then
+    add_row "1" "Resource governance: storage" "ACCEPTED" "• Governance standards met"
   else
-    TJSON="$(aws resourcegroupstaggingapi get-resources --resource-type-filters dynamodb:table --tag-filters Key=Owner,Values=Ethnus Key=Challenge,Values="$PREFIX" --query 'ResourceTagMappingList[].ResourceARN' --output json 2>/dev/null || echo '[]')"
-    echo "$TJSON" | jq -e --arg arn "$DDB_ARN" '.[] | select(.==$arn)' >/dev/null 2>&1 && has_owner=1 || has_owner=0
-    has_chal=$has_owner
+    add_row "1" "Resource governance: storage" "INCOMPLETE" "• Review organizational standards"
   fi
-  if [ "${has_owner:-0}" -ge 1 ] && [ "${has_chal:-0}" -ge 1 ]; then ST="ACCEPTED"; NOTE="ok"; else ST="INCOMPLETE"; NOTE="tags"; fi
-else ST="INCOMPLETE"; NOTE="table"; fi
-add_row "$i" "Tags: key-value database" "$ST" "$NOTE"; [ "$ST" = "ACCEPTED" ] && ACCEPTED=$((ACCEPTED+1)) || INCOMPLETE=$((INCOMPLETE+1)); i=$((i+1))
+else
+  add_row "1" "Resource governance: storage" "INCOMPLETE" "• Infrastructure not found"
+fi
 
-# 3) Compute concurrency
-if aws lambda get-function --function-name "$WRITER" >/dev/null 2>&1; then
-  RC="$(aws lambda get-function-concurrency --function-name "$WRITER" --query 'ReservedConcurrentExecutions' --output text 2>/dev/null || echo "UNSET")"
-  if [ "$RC" = "0" ]; then ST="INCOMPLETE"; NOTE="limit"; else ST="ACCEPTED"; NOTE="ok"; fi
-else ST="INCOMPLETE"; NOTE="function"; fi
-add_row "$i" "Compute concurrency" "$ST" "$NOTE"; [ "$ST" = "ACCEPTED" ] && ACCEPTED=$((ACCEPTED+1)) || INCOMPLETE=$((INCOMPLETE+1)); i=$((i+1))
+# ---------- Challenge 2: Database resource compliance ----------
+DDB_TAGS="$(aws dynamodb list-tags-of-resource --resource-arn "arn:${PARTITION}:dynamodb:${REGION}:${ACCOUNT_ID}:table/${PREFIX}-orders" --query 'Tags[?Key==`Owner` && Value==`Ethnus`]|[0].Key' --output text 2>/dev/null || echo "")"
+if [ "$DDB_TAGS" = "Owner" ]; then
+  add_row "2" "Resource governance: database" "ACCEPTED" "• Governance standards met"
+else
+  add_row "2" "Resource governance: database" "INCOMPLETE" "• Review organizational standards"
+fi
 
-# 4) Compute configuration
-if aws lambda get-function --function-name "$WRITER" >/dev/null 2>&1; then
-  WT="$(aws lambda get-function-configuration --function-name "$WRITER" --query 'Environment.Variables.DDB_TABLE' --output text 2>/dev/null || echo "")"
-  if [ "$WT" = "${DDB_TABLE}" ]; then ST="ACCEPTED"; NOTE="ok"; else ST="INCOMPLETE"; NOTE="env"; fi
-else ST="INCOMPLETE"; NOTE="function"; fi
-add_row "$i" "Compute configuration" "$ST" "$NOTE"; [ "$ST" = "ACCEPTED" ] && ACCEPTED=$((ACCEPTED+1)) || INCOMPLETE=$((INCOMPLETE+1)); i=$((i+1))
+# ---------- Challenge 3: Compute resource limits ----------
+WRITER_CONCURRENCY="$(aws lambda get-function-concurrency --function-name "${PREFIX}-writer" --query 'ReservedConcurrencyLimit' --output text 2>/dev/null || echo "None")"
+if [ "$WRITER_CONCURRENCY" = "None" ]; then
+  add_row "3" "Performance optimization: compute" "ACCEPTED" "• Resource allocation optimized"
+else
+  add_row "3" "Performance optimization: compute" "INCOMPLETE" "• Review performance settings"
+fi
 
-# 5) Notifications publish
-if [ "$TOPIC_ARN" != "None" ] && MID="$(aws sns publish --topic-arn "$TOPIC_ARN" --message '{"probe":"ok"}' --query MessageId --output text 2>/dev/null)"; then
-  ST="ACCEPTED"; NOTE="ok"
-else ST="INCOMPLETE"; NOTE="publish"; fi
-add_row "$i" "Notifications publish" "$ST" "$NOTE"; [ "$ST" = "ACCEPTED" ] && ACCEPTED=$((ACCEPTED+1)) || INCOMPLETE=$((INCOMPLETE+1)); i=$((i+1))
+# ---------- Challenge 4: Application configuration ----------
+WRITER_ENV="$(aws lambda get-function-configuration --function-name "${PREFIX}-writer" --query 'Environment.Variables.DDB_TABLE' --output text 2>/dev/null || echo "")"
+if [ "$WRITER_ENV" = "${PREFIX}-orders" ]; then
+  add_row "4" "Application configuration: runtime" "ACCEPTED" "• Configuration aligned"
+else
+  add_row "4" "Application configuration: runtime" "INCOMPLETE" "• Review runtime parameters"
+fi
 
-# 6) Private data endpoint policy
-if [ -n "${VPCE_DDB_ID:-}" ]; then
-  PJSON="$(aws ec2 describe-vpc-endpoints --vpc-endpoint-ids "$VPCE_DDB_ID" --query 'VpcEndpoints[0].PolicyDocument' --output text 2>/dev/null || echo '')"
-  if [ -n "$PJSON" ] && echo "$PJSON" | jq -e '.' >/dev/null 2>&1 \
-     && echo "$PJSON" | jq -e '([.Statement[]? | select(.Effect=="Allow") | .Action] | flatten | map(tostring) | any(.=="dynamodb:PutItem" or .=="dynamodb:*"))' >/dev/null 2>&1; then
-    ST="ACCEPTED"; NOTE="ok"
-  else ST="INCOMPLETE"; NOTE="policy"; fi
-else ST="INCOMPLETE"; NOTE="endpoint"; fi
-add_row "$i" "Private data endpoint policy" "$ST" "$NOTE"; [ "$ST" = "ACCEPTED" ] && ACCEPTED=$((ACCEPTED+1)) || INCOMPLETE=$((INCOMPLETE+1)); i=$((i+1))
-
-# 7) Network endpoints routing
-okmain=1
-if [ -n "${VPCE_S3_ID:-}" ] && [ "$RTA_MAIN" != "None" ]; then
-  RTIDS="$(aws ec2 describe-vpc-endpoints --vpc-endpoint-ids "$VPCE_S3_ID" --query 'VpcEndpoints[0].RouteTableIds' --output text 2>/dev/null | tr '\t' '\n')"
-  echo "$RTIDS" | grep -qx "$RTA_MAIN" || okmain=0
-else okmain=0; fi
-if [ -n "${VPCE_DDB_ID:-}" ] && [ "$RTA_MAIN" != "None" ]; then
-  RTIDD="$(aws ec2 describe-vpc-endpoints --vpc-endpoint-ids "$VPCE_DDB_ID" --query 'VpcEndpoints[0].RouteTableIds' --output text 2>/dev/null | tr '\t' '\n')"
-  echo "$RTIDD" | grep -qx "$RTA_MAIN" || okmain=0
-else okmain=0; fi
-[ $okmain -eq 1 ] && { ST="ACCEPTED"; NOTE="ok"; } || { ST="INCOMPLETE"; NOTE="routing"; }
-add_row "$i" "Network endpoints routing" "$ST" "$NOTE"; [ "$ST" = "ACCEPTED" ] && ACCEPTED=$((ACCEPTED+1)) || INCOMPLETE=$((INCOMPLETE+1)); i=$((i+1))
-
-# 8) API integration
-if [ "$API_ID" != "None" ]; then
-  RES_ORDERS_ID="$(echo "$API_RESOURCES_JSON" | jq -r '.items[]? | select(.path=="/orders") | .id' 2>/dev/null | head -n1)"
-  if [ -n "$RES_ORDERS_ID" ]; then
-    INTEG_URI="$(aws apigateway get-integration --rest-api-id "$API_ID" --resource-id "$RES_ORDERS_ID" --http-method GET --query 'uri' --output text 2>/dev/null || echo "")"
-    READER_ARN="$(aws lambda get-function --function-name "$READER" --query 'Configuration.FunctionArn' --output text 2>/dev/null || echo "")"
-    if [ -n "$INTEG_URI" ] && [ -n "$READER_ARN" ] && echo "$INTEG_URI" | grep -q "$READER_ARN"; then ST="ACCEPTED"; NOTE="ok"; else ST="INCOMPLETE"; NOTE="integration"; fi
-  else ST="INCOMPLETE"; NOTE="resource"; fi
-else ST="INCOMPLETE"; NOTE="api"; fi
-add_row "$i" "API integration" "$ST" "$NOTE"; [ "$ST" = "ACCEPTED" ] && ACCEPTED=$((ACCEPTED+1)) || INCOMPLETE=$((INCOMPLETE+1)); i=$((i+1))
-
-# 9) API network restrictions
-if [ "$API_ID" != "None" ]; then
-  TYPES="$(echo "$API_JSON" | jq -r '.endpointConfiguration.types[]?' 2>/dev/null)"
-  priv_ok=0; match_ok=0
-  echo "$TYPES" | grep -qx "PRIVATE" && priv_ok=1
-  if [ -n "$VPCE_EXEC_ID" ] && [ -n "$POLICY_JSON" ]; then
-    SRC="$(echo "$POLICY_JSON" | jq -r '.Statement[]? | .Condition?."StringEquals"?."aws:SourceVpce"? // empty' 2>/dev/null | head -n1)"
-    [ "$SRC" = "$VPCE_EXEC_ID" ] && match_ok=1
+# ---------- Challenge 5: Messaging service access ----------
+TOPIC_ARN="$(aws sns list-topics --query "Topics[?contains(Arn, '${PREFIX}-notifications')].Arn|[0]" --output text 2>/dev/null || echo "")"
+if [ -n "$TOPIC_ARN" ]; then
+  TEST_PUBLISH="$(aws sns publish --topic-arn "$TOPIC_ARN" --message "test" --query 'MessageId' --output text 2>/dev/null || echo "error")"
+  if [ "$TEST_PUBLISH" != "error" ]; then
+    add_row "5" "Communication services: publish" "ACCEPTED" "• Message delivery enabled"
+  else
+    add_row "5" "Communication services: publish" "INCOMPLETE" "• Review access policies"
   fi
-  if [ $priv_ok -eq 1 ] && [ $match_ok -eq 1 ]; then ST="ACCEPTED"; NOTE="ok"; else ST="INCOMPLETE"; NOTE="policy"; fi
-else ST="INCOMPLETE"; NOTE="api"; fi
-add_row "$i" "API network restrictions" "$ST" "$NOTE"; [ "$ST" = "ACCEPTED" ] && ACCEPTED=$((ACCEPTED+1)) || INCOMPLETE=$((INCOMPLETE+1)); i=$((i+1))
+else
+  add_row "5" "Communication services: publish" "INCOMPLETE" "• Service not available"
+fi
 
-# 10) Scheduled invocation
-RULE="${PREFIX}-tick"
-if aws events describe-rule --name "$RULE" >/dev/null 2>&1; then
-  STT="$(aws events describe-rule --name "$RULE" --query 'State' --output text 2>/dev/null || echo "")"
-  if [ "$STT" = "ENABLED" ]; then ST="ACCEPTED"; NOTE="ok"; else ST="INCOMPLETE"; NOTE="state"; fi
-else ST="INCOMPLETE"; NOTE="rule"; fi
-add_row "$i" "Scheduled invocation" "$ST" "$NOTE"; [ "$ST" = "ACCEPTED" ] && ACCEPTED=$((ACCEPTED+1)) || INCOMPLETE=$((INCOMPLETE+1)); i=$((i+1))
+# ---------- Challenge 6: Network service policies ----------
+DDB_VPC_ENDPOINT="$(aws ec2 describe-vpc-endpoints --filters "Name=service-name,Values=com.amazonaws.${REGION}.dynamodb" "Name=tag:Name,Values=${PREFIX}-ddb-endpoint" --query 'VpcEndpoints[0].VpcEndpointId' --output text 2>/dev/null || echo "")"
+if [ -n "$DDB_VPC_ENDPOINT" ] && [ "$DDB_VPC_ENDPOINT" != "None" ]; then
+  ENDPOINT_POLICY="$(aws ec2 describe-vpc-endpoints --vpc-endpoint-ids "$DDB_VPC_ENDPOINT" --query 'VpcEndpoints[0].PolicyDocument' --output text 2>/dev/null || echo "")"
+  if echo "$ENDPOINT_POLICY" | jq -e '.Statement[]|select(.Action[]?=="dynamodb:PutItem")' >/dev/null 2>&1; then
+    add_row "6" "Network security: data access" "ACCEPTED" "• Access controls configured"
+  else
+    add_row "6" "Network security: data access" "INCOMPLETE" "• Review access permissions"
+  fi
+else
+  add_row "6" "Network security: data access" "INCOMPLETE" "• Endpoint configuration needed"
+fi
 
-# 11) Compute integration test
-if aws lambda get-function --function-name "$WRITER" >/dev/null 2>&1; then
-  OUT="$(aws lambda invoke --function-name "$WRITER" --payload '{}' --cli-binary-format raw-in-base64-out /dev/stdout 2>/dev/null || echo '{}')"
-  if echo "$OUT" | jq -e '.' >/dev/null 2>&1; then
-    ddb_ok="$(echo "$OUT" | jq -r '.ddb_ok // empty')"
-    s3_ok="$(echo "$OUT" | jq -r '.s3_ok // empty')"
-    sns_ok="$(echo "$OUT" | jq -r '.sns_ok // empty')"
-    if [ "$ddb_ok" = "true" ] && [ "$s3_ok" = "true" ] && [ "$sns_ok" = "true" ]; then ST="ACCEPTED"; NOTE="ok"; else ST="INCOMPLETE"; NOTE="io"; fi
-  else ST="INCOMPLETE"; NOTE="invoke"; fi
-else ST="INCOMPLETE"; NOTE="function"; fi
-add_row "$i" "Compute integration test" "$ST" "$NOTE"; [ "$ST" = "ACCEPTED" ] && ACCEPTED=$((ACCEPTED+1)) || INCOMPLETE=$((INCOMPLETE+1)); i=$((i+1))
+# ---------- Challenge 7: Network routing configuration ----------
+MAIN_RT_ID="$(aws ec2 describe-route-tables --filters "Name=tag:Name,Values=${PREFIX}-main-rt" --query 'RouteTables[0].RouteTableId' --output text 2>/dev/null || echo "")"
+if [ -n "$MAIN_RT_ID" ] && [ "$MAIN_RT_ID" != "None" ]; then
+  S3_ROUTE_COUNT="$(aws ec2 describe-route-tables --route-table-ids "$MAIN_RT_ID" --query 'length(RouteTables[0].Routes[?GatewayId && starts_with(GatewayId, `vpce-`) && DestinationPrefixListId])' --output text 2>/dev/null || echo "0")"
+  if [ "$S3_ROUTE_COUNT" -gt "1" ]; then
+    add_row "7" "Network routing: service access" "ACCEPTED" "• Traffic routing optimized"
+  else
+    add_row "7" "Network routing: service access" "INCOMPLETE" "• Review routing configuration"
+  fi
+else
+  add_row "7" "Network routing: service access" "INCOMPLETE" "• Routing infrastructure needed"
+fi
 
-# 12) Final flag
-FLAG_NOTE=""
-if [ "$API_ID" != "None" ]; then
-  RES_ORDERS_ID="$(echo "$API_RESOURCES_JSON" | jq -r '.items[]? | select(.path=="/orders") | .id' 2>/dev/null | head -n1)"
-  if [ -n "$RES_ORDERS_ID" ]; then
-    TRES="$(aws apigateway test-invoke-method --rest-api-id "$API_ID" --resource-id "$RES_ORDERS_ID" --http-method GET --output json 2>/dev/null || echo '{}')"
-    STATUS="$(echo "$TRES" | jq -r '.status // empty' 2>/dev/null || echo '')"
-    BODY="$(echo "$TRES" | jq -r '.body // empty' 2>/dev/null || echo '')"
-    FLAG=""
-    if [[ "$BODY" =~ ^\{ ]]; then
-      FLAG="$(echo "$BODY" | jq -r '.flag // empty' 2>/dev/null || echo '')"
+# ---------- Challenge 8: API service integration ----------
+API_ID="$(aws apigateway get-rest-apis --query "items[?name=='${PREFIX}-api'].id|[0]" --output text 2>/dev/null || echo "")"
+if [ -n "$API_ID" ] && [ "$API_ID" != "None" ]; then
+  ORDERS_RESOURCE="$(aws apigateway get-resources --rest-api-id "$API_ID" --query "items[?pathPart=='orders'].id|[0]" --output text 2>/dev/null || echo "")"
+  if [ -n "$ORDERS_RESOURCE" ] && [ "$ORDERS_RESOURCE" != "None" ]; then
+    INTEGRATION_URI="$(aws apigateway get-integration --rest-api-id "$API_ID" --resource-id "$ORDERS_RESOURCE" --http-method GET --query 'uri' --output text 2>/dev/null | grep "${PREFIX}-reader" || echo "")"
+    if [ -n "$INTEGRATION_URI" ]; then
+      add_row "8" "API service: backend integration" "ACCEPTED" "• Service integration complete"
+    else
+      add_row "8" "API service: backend integration" "INCOMPLETE" "• Review service connections"
     fi
-    if [ "$STATUS" = "200" ] && [ -n "$FLAG" ]; then ST="ACCEPTED"; FLAG_NOTE="$FLAG"; else ST="INCOMPLETE"; FLAG_NOTE=""; fi
-  else ST="INCOMPLETE"; FLAG_NOTE=""; fi
-else ST="INCOMPLETE"; FLAG_NOTE=""; fi
-add_row "$i" "Final flag" "$ST" "$FLAG_NOTE"; [ "$ST" = "ACCEPTED" ] && ACCEPTED=$((ACCEPTED+1)) || INCOMPLETE=$((INCOMPLETE+1)); i=$((i+1))
+  else
+    add_row "8" "API service: backend integration" "INCOMPLETE" "• Resource configuration needed"
+  fi
+else
+  add_row "8" "API service: backend integration" "INCOMPLETE" "• API infrastructure needed"
+fi
+
+# ---------- Challenge 9: API access controls ----------
+if [ -n "$API_ID" ] && [ "$API_ID" != "None" ]; then
+  API_JSON="$(aws apigateway get-rest-api --rest-api-id "$API_ID" 2>/dev/null || echo "")"
+  POLICY_JSON="$(echo "$API_JSON" | jq -c '(.policy // empty) | select(.!="") | fromjson' 2>/dev/null || echo "")"
+  if [ -n "$POLICY_JSON" ]; then
+    VPC_CONDITION="$(echo "$POLICY_JSON" | jq -e '.Statement[]|select(.Condition.StringEquals?"aws:SourceVpce")' 2>/dev/null || echo "")"
+    if [ -n "$VPC_CONDITION" ]; then
+      add_row "9" "API security: access restrictions" "ACCEPTED" "• Access controls enforced"
+    else
+      add_row "9" "API security: access restrictions" "INCOMPLETE" "• Review access policies"
+    fi
+  else
+    add_row "9" "API security: access restrictions" "INCOMPLETE" "• Policy configuration needed"
+  fi
+else
+  add_row "9" "API security: access restrictions" "INCOMPLETE" "• API infrastructure needed"
+fi
+
+# ---------- Challenge 10: Automation scheduling ----------
+RULE_STATE="$(aws events describe-rule --name "${PREFIX}-tick" --query 'State' --output text 2>/dev/null || echo "")"
+if [ "$RULE_STATE" = "ENABLED" ]; then
+  add_row "10" "Process automation: scheduling" "ACCEPTED" "• Automation workflows active"
+else
+  add_row "10" "Process automation: scheduling" "INCOMPLETE" "• Review automation settings"
+fi
+
+# ---------- Challenge 11: System integration testing ----------
+WRITER_TEST="$(aws lambda invoke --function-name "${PREFIX}-writer" --payload '{}' /tmp/writer-response.json >/dev/null 2>&1 && cat /tmp/writer-response.json 2>/dev/null || echo '{}')"
+WRITER_SUCCESS="$(echo "$WRITER_TEST" | jq -r '.ddb_ok and .s3_ok and .sns_ok' 2>/dev/null || echo "false")"
+rm -f /tmp/writer-response.json 2>/dev/null
+if [ "$WRITER_SUCCESS" = "true" ]; then
+  add_row "11" "System integration: end-to-end" "ACCEPTED" "• All services operational"
+else
+  add_row "11" "System integration: end-to-end" "INCOMPLETE" "• Review system dependencies"
+fi
+
+# ---------- Challenge 12: Service delivery verification ----------
+if [ -n "$API_ID" ] && [ "$API_ID" != "None" ]; then
+  API_ENDPOINT="https://${API_ID}.execute-api.${REGION}.amazonaws.com/prod/orders"
+  VPC_A_ID="$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=${PREFIX}-vpc-a" --query 'Vpcs[0].VpcId' --output text 2>/dev/null || echo "")"
+  if [ -n "$VPC_A_ID" ] && [ "$VPC_A_ID" != "None" ]; then
+    API_VPC_ENDPOINT="$(aws ec2 describe-vpc-endpoints --filters "Name=service-name,Values=com.amazonaws.${REGION}.execute-api" "Name=vpc-id,Values=${VPC_A_ID}" --query 'VpcEndpoints[0].DnsEntries[0].DnsName' --output text 2>/dev/null || echo "")"
+    if [ -n "$API_VPC_ENDPOINT" ] && [ "$API_VPC_ENDPOINT" != "None" ]; then
+      FLAG_TEST="$(curl -s -m 10 "https://${API_VPC_ENDPOINT}/prod/orders" -H "Host: ${API_ID}.execute-api.${REGION}.amazonaws.com" 2>/dev/null | jq -r '.flag // empty' 2>/dev/null || echo "")"
+      if [[ "$FLAG_TEST" =~ ^ETHNUS\{ ]]; then
+        add_row "12" "Service delivery: final verification" "ACCEPTED" "• Mission accomplished"
+      else
+        add_row "12" "Service delivery: final verification" "INCOMPLETE" "• Complete all prerequisites"
+      fi
+    else
+      add_row "12" "Service delivery: final verification" "INCOMPLETE" "• Network access required"
+    fi
+  else
+    add_row "12" "Service delivery: final verification" "INCOMPLETE" "• Infrastructure prerequisites"
+  fi
+else
+  add_row "12" "Service delivery: final verification" "INCOMPLETE" "• Service not available"
+fi
 
 for r in "${rows[@]}"; do IFS="|" read -r c1 c2 c3 c4 <<<"$r"; printf "| %s | %s | %s | %s |\n" "$(pad "$c1" 2)" "$(pad "$c2" 28)" "$(pad "$c3" 11)" "$(pad "$c4" 23)"; done
 rule 72

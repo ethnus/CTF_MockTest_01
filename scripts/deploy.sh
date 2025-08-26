@@ -50,9 +50,25 @@ fi
 terraform init -no-color -upgrade >/dev/null
 
 echo "apply"
-if ! terraform apply -no-color -compact-warnings -auto-approve -var "region=${REGION}" -var "prefix=${PREFIX}"; then
+echo "Applying Terraform configuration..."
+terraform apply -auto-approve -compact-warnings -no-color | while IFS= read -r line; do
+  if [[ "$line" =~ ^[[:space:]]*[a-zA-Z0-9_-]+\. ]]; then
+    echo "📦 $line"
+  elif [[ "$line" =~ (Creating|Modifying|Destroying) ]]; then
+    echo "⚙️  $line"
+  elif [[ "$line" =~ (Creation|Modification|Destruction).*complete ]]; then
+    echo "✅ $line"
+  elif [[ "$line" =~ ^Apply ]]; then
+    echo "🎯 $line"
+  else
+    echo "$line"
+  fi
+done
+
+if [ $? -ne 0 ]; then
+  echo ""
   echo "ERROR: Terraform apply failed"
-  echo "Check for resource conflicts or run: bash teardown.sh"
+  echo "Try running: bash teardown.sh && bash deploy.sh"
   exit 1
 fi
 

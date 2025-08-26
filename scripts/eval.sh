@@ -85,9 +85,9 @@ echo "evaluation"
 printf " account : %s\n" "$ACCOUNT_ID"
 printf " region  : %s\n" "$REGION"
 printf " prefix  : %s\n" "$PREFIX"
-rule 72
-printf "| %s | %s | %s | %s |\n" "$(pad "#" 2)" "$(pad "Check" 28)" "$(pad "Status" 11)" "$(pad "Note" 23)"
-rule 72
+rule 86
+printf "| %s | %s | %s | %s |\n" "$(pad "#" 2)" "$(pad "Check" 44)" "$(pad "Status" 12)" "$(pad "Note" 22)"
+rule 86
 
 ACCEPTED=0; INCOMPLETE=0; i=1
 
@@ -219,8 +219,8 @@ if [ "$API_ID" != "None" ]; then
 else ST="INCOMPLETE"; FLAG_NOTE=""; fi
 add_row "$i" "Service delivery: final verification" "$ST" "$FLAG_NOTE"; [ "$ST" = "ACCEPTED" ] && ACCEPTED=$((ACCEPTED+1)) || INCOMPLETE=$((INCOMPLETE+1)); i=$((i+1))
 
-for r in "${rows[@]}"; do IFS="|" read -r c1 c2 c3 c4 <<<"$r"; printf "| %s | %s | %s | %s |\n" "$(pad "$c1" 2)" "$(pad "$c2" 28)" "$(pad "$c3" 11)" "$(pad "$c4" 23)"; done
-rule 72
+for r in "${rows[@]}"; do IFS="|" read -r c1 c2 c3 c4 <<<"$r"; printf "| %s | %s | %s | %s |\n" "$(pad "$c1" 2)" "$(pad "$c2" 44)" "$(pad "$c3" 12)" "$(pad "$c4" 22)"; done
+rule 86
 printf "ACCEPTED : %s\n" "$ACCEPTED"
 printf "INCOMPLETE : %s\n" "$INCOMPLETE"
 [ "$INCOMPLETE" -eq 0 ]
